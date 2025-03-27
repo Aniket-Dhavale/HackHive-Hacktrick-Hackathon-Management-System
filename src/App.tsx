@@ -7,6 +7,10 @@ import RegistrationForm from './components/RegistrationForm';
 import ParticipantDashboard from './components/ParticipantDashboard';
 import ResourceDetails from './components/ResourceDetails';
 import JudgeRoutes from './routes/JudgeRoutes';
+import ProtectedRoute from './components/ProtectedRoutes';
+import Login from './components/Login';
+import LoginSuccess from './components/LoginSuccess';
+import AuthButton from './components/AuthButton';
 
 function Home() {
   const navigate = useNavigate();
@@ -14,24 +18,7 @@ function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Code2 className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium">
-                Sign In
-              </button>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                Sign Up
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+     
 
       {/* Hero Section */}
       <main className="flex-grow">
@@ -61,7 +48,7 @@ function Home() {
                 View All Hackathons
               </button>
               <button 
-                onClick={() => navigate('/host-hackathon')}
+                onClick={() => navigate('/host')}
                 className="bg-blue-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
               >
                 Host a Hackathon
@@ -153,14 +140,23 @@ function App() {
   return (
     <Router>
       <Routes>
+        
         <Route path="/" element={<Home />} />
-        <Route path="/host" element={<HostHackathon />} />
-        <Route path="/hackathons" element={<HackathonsList />} />
-        <Route path="/hackathon/:id" element={<HackathonDetails />} />
-        <Route path="/register/:id" element={<RegistrationForm />} />
-        <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
-        <Route path="/resources/:resourceId" element={<ResourceDetails />} />
-        <Route path="/judge/*" element={<JudgeRoutes />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/login-success" element={<LoginSuccess />} />
+
+
+       
+        <Route element={<ProtectedRoute />}>
+          <Route path="/host" element={<HostHackathon />} />
+          <Route path="/hackathons" element={<HackathonsList />} />
+          <Route path="/hackathon/:id" element={<HackathonDetails />} />
+          <Route path="/register/:id" element={<RegistrationForm />} />
+          <Route path="/participant-dashboard" element={<ParticipantDashboard />} />
+          <Route path="/resources/:resourceId" element={<ResourceDetails />} />
+          <Route path="/judge/*" element={<JudgeRoutes />} />
+          
+        </Route>
       </Routes>
     </Router>
   );

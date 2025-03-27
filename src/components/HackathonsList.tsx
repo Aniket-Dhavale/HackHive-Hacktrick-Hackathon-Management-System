@@ -1,100 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Code2, Search, Filter, Calendar, Users, MapPin, Clock, ArrowUpDown } from 'lucide-react';
 
-// Mock data - replace with actual data from your backend
-const mockHackathons = [
-  {
-    id: 1,
-    title: "AI Innovation Challenge",
-    description: "Build the next generation of AI-powered applications",
-    startDate: "2024-04-15",
-    endDate: "2024-04-17",
-    location: "Virtual",
-    maxParticipants: 100,
-    currentParticipants: 45,
-    prizePool: "₹5,00,000",
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-04-10",
-    theme: "Artificial Intelligence"
-  },
-  {
-    id: 2,
-    title: "Web3 Development Hackathon",
-    description: "Create innovative blockchain solutions",
-    startDate: "2024-05-01",
-    endDate: "2024-05-03",
-    location: "San Francisco, CA",
-    maxParticipants: 150,
-    currentParticipants: 89,
-    prizePool: "₹7,50,000",
-    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-04-25",
-    theme: "Blockchain"
-  },
-  {
-    id: 3,
-    title: "Healthcare Tech Innovation",
-    description: "Develop solutions for modern healthcare challenges",
-    startDate: "2024-05-15",
-    endDate: "2024-05-17",
-    location: "Bangalore, India",
-    maxParticipants: 120,
-    currentParticipants: 78,
-    prizePool: "₹6,00,000",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-05-10",
-    theme: "Healthcare"
-  },
-  {
-    id: 4,
-    title: "Sustainable Tech Solutions",
-    description: "Build eco-friendly technology solutions",
-    startDate: "2024-06-01",
-    endDate: "2024-06-03",
-    location: "Virtual",
-    maxParticipants: 200,
-    currentParticipants: 156,
-    prizePool: "₹8,00,000",
-    image: "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-05-25",
-    theme: "Sustainability"
-  },
-  {
-    id: 5,
-    title: "FinTech Innovation Challenge",
-    description: "Create next-gen financial technology solutions",
-    startDate: "2024-06-15",
-    endDate: "2024-06-17",
-    location: "Mumbai, India",
-    maxParticipants: 180,
-    currentParticipants: 92,
-    prizePool: "₹10,00,000",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-06-10",
-    theme: "FinTech"
-  },
-  {
-    id: 6,
-    title: "EdTech Revolution",
-    description: "Transform education through technology",
-    startDate: "2024-07-01",
-    endDate: "2024-07-03",
-    location: "Virtual",
-    maxParticipants: 150,
-    currentParticipants: 45,
-    prizePool: "₹4,50,000",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80",
-    status: "upcoming",
-    registrationDeadline: "2024-06-25",
-    theme: "Education"
-  }
-];
+interface Hackathon {
+  _id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  venue: string;
+  maxParticipants: number;
+  currentParticipants?: number;
+  prizePool: number;
+  status?: string;
+  registrationDeadline: string;
+  theme: string;
+  image?: string;
+  platform?: string;
+}
+
 
 const HackathonsList = () => {
   const navigate = useNavigate();
@@ -103,16 +27,98 @@ const HackathonsList = () => {
   const [filterLocation, setFilterLocation] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filteredHackathons = mockHackathons
+  // Fetch hackathons from backend
+  useEffect(() => {
+    const fetchHackathons = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/home', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            navigate('/login');
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Transform the data based on user role
+        let hackathonsData: Hackathon[] = [];
+
+        if (data.hackathons) {
+          // Regular user view
+          hackathonsData = data.hackathons;
+        } else if (data.participantHackathons) {
+          // Participant view
+          hackathonsData = data.participantHackathons.map((team: any) => team.hackathonParticipatedId);
+        } else if (data.organisedHackathons) {
+          // Admin view
+          hackathonsData = data.organisedHackathons.hackathonId;
+        } else if (data.judgeHackathon) {
+          // Judge view
+          hackathonsData = data.judgeHackathon.hackathonId;
+        }
+
+        // Add status based on dates
+        const now = new Date();
+        const processedHackathons = hackathonsData.map((hackathon: any) => {
+          const startDate = new Date(hackathon.startDate);
+          const endDate = new Date(hackathon.endDate);
+          const registrationDeadline = new Date(hackathon.registrationDeadline);
+
+          let status = 'upcoming';
+          if (now > endDate) {
+            status = 'completed';
+          } else if (now >= startDate && now <= endDate) {
+            status = 'ongoing';
+          }
+
+          return {
+            ...hackathon,
+            id: hackathon._id,
+            venue: hackathon.venue || 'Virtual',
+            currentParticipants: hackathon.currentParticipants || 0,
+            prizePool: `₹${hackathon.prizePool.toLocaleString()}`,
+            status,
+            image: hackathon.image || 'https://images.unsplash.com/photo-1551033406-611cf9a28f67?auto=format&fit=crop&q=80'
+          };
+        });
+
+        setHackathons(processedHackathons);
+      } catch (err) {
+        console.error('Error fetching hackathons:', err);
+        setError('Failed to load hackathons. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHackathons();
+  }, [navigate]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  const filteredHackathons = hackathons
     .filter(hackathon => {
       const matchesSearch = hackathon.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           hackathon.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           hackathon.theme.toLowerCase().includes(searchQuery.toLowerCase());
+        hackathon.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        hackathon.theme.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || hackathon.status === filterStatus;
-      const matchesLocation = filterLocation === 'all' || 
-                            (filterLocation === 'virtual' && hackathon.location === 'Virtual') ||
-                            (filterLocation === 'in-person' && hackathon.location !== 'Virtual');
+      const matchesLocation = filterLocation === 'all' ||
+        (filterLocation === 'virtual' && hackathon.venue === 'Virtual') ||
+        (filterLocation === 'in-person' && hackathon.venue !== 'Virtual');
       return matchesSearch && matchesStatus && matchesLocation;
     })
     .sort((a, b) => {
@@ -122,10 +128,11 @@ const HackathonsList = () => {
           comparison = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
           break;
         case 'prize':
-          comparison = parseInt(a.prizePool.replace(/[^0-9]/g, '')) - parseInt(b.prizePool.replace(/[^0-9]/g, ''));
+          //@ts-ignore
+          comparison = a.prizePool.replace(/[^0-9]/g, '') - b.prizePool.replace(/[^0-9]/g, '');
           break;
         case 'participants':
-          comparison = a.currentParticipants - b.currentParticipants;
+          comparison = (a.currentParticipants || 0) - (b.currentParticipants || 0);
           break;
         case 'deadline':
           comparison = new Date(a.registrationDeadline).getTime() - new Date(b.registrationDeadline).getTime();
@@ -136,36 +143,39 @@ const HackathonsList = () => {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
-  const toggleSortOrder = () => {
-    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Code2 className="mx-auto h-12 w-12 text-blue-600 animate-pulse" />
+          <p className="mt-4 text-lg text-gray-600">Loading hackathons...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Code2 className="mx-auto h-12 w-12 text-red-600" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">Error loading hackathons</h3>
+          <p className="mt-2 text-gray-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <button 
-                onClick={() => navigate('/')}
-                className="flex items-center hover:opacity-80 transition-opacity"
-              >
-                <Code2 className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium">
-                Sign In
-              </button>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                Sign Up
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -236,7 +246,7 @@ const HackathonsList = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredHackathons.map((hackathon) => (
             <div
-              key={hackathon.id}
+              key={hackathon._id}
               className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow border-2 border-gray-200"
             >
               <div className="relative h-48">
@@ -246,12 +256,16 @@ const HackathonsList = () => {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-4 right-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    hackathon.status === 'upcoming' ? 'bg-green-100 text-green-800' :
-                    hackathon.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {hackathon.status.charAt(0).toUpperCase() + hackathon.status.slice(1)}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${hackathon.status === 'upcoming' ? 'bg-green-100 text-green-800' :
+                      hackathon.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
+
+                    {hackathon.status ? (
+                      hackathon.status.charAt(0).toUpperCase() + hackathon.status.slice(1)
+                    ) : (
+                      'Upcoming'
+                    )}
                   </span>
                 </div>
               </div>
@@ -263,15 +277,18 @@ const HackathonsList = () => {
                   </span>
                 </div>
                 <p className="text-gray-600 mb-4">{hackathon.description}</p>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center text-gray-600">
                     <Calendar className="h-5 w-5 mr-2" />
-                    <span>{new Date(hackathon.startDate).toLocaleDateString()} - {new Date(hackathon.endDate).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(hackathon.startDate).toLocaleDateString()} - {' '}
+                      {new Date(hackathon.endDate).toLocaleDateString()}
+                    </span>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-5 w-5 mr-2" />
-                    <span>{hackathon.location}</span>
+                    <span>{hackathon.venue}</span>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Users className="h-5 w-5 mr-2" />
@@ -288,7 +305,7 @@ const HackathonsList = () => {
 
                 <div className="mt-6">
                   <button
-                    onClick={() => navigate(`/hackathon/${hackathon.id}`)}
+                    onClick={() => navigate(`/hackathon/${hackathon._id}`)}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     View Details
@@ -300,7 +317,7 @@ const HackathonsList = () => {
         </div>
 
         {/* Empty State */}
-        {filteredHackathons.length === 0 && (
+        {filteredHackathons.length === 0 && !loading && (
           <div className="text-center py-12">
             <Code2 className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No hackathons found</h3>
@@ -312,4 +329,4 @@ const HackathonsList = () => {
   );
 };
 
-export default HackathonsList; 
+export default HackathonsList;

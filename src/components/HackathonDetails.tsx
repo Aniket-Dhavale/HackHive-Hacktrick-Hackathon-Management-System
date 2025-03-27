@@ -1,115 +1,166 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Code2, Calendar, Users, MapPin, Clock, ArrowLeft, ExternalLink, Mail, Github, Linkedin } from 'lucide-react';
 
-// Mock data - replace with actual data from your backend
-const mockHackathon = {
-  id: 1,
-  title: "AI Innovation Challenge",
-  description: "Build the next generation of AI-powered applications",
-  startDate: "2024-04-15",
-  endDate: "2024-04-17",
-  location: "Virtual",
-  maxParticipants: 100,
-  currentParticipants: 45,
-  prizePool: "₹5,00,000",
-  image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80",
-  status: "upcoming",
-  registrationDeadline: "2024-04-10",
-  theme: "Artificial Intelligence",
-  eligibility: {
-    age: "18+ years",
-    skillLevel: "Intermediate to Advanced",
-    teamSize: "2-4 members",
-    requirements: [
-      "Basic programming knowledge",
-      "Understanding of AI/ML concepts",
-      "GitHub account",
-      "Laptop with development environment"
-    ]
-  },
-  schedule: [
-    {
-      date: "2024-04-15",
-      events: [
-        { time: "09:00 AM", title: "Opening Ceremony" },
-        { time: "10:00 AM", title: "Hacking Begins" },
-        { time: "02:00 PM", title: "Lunch Break" },
-        { time: "08:00 PM", title: "Day 1 Wrap-up" }
-      ]
-    },
-    {
-      date: "2024-04-16",
-      events: [
-        { time: "09:00 AM", title: "Day 2 Begins" },
-        { time: "02:00 PM", title: "Lunch Break" },
-        { time: "04:00 PM", title: "Mentorship Session" },
-        { time: "08:00 PM", title: "Day 2 Wrap-up" }
-      ]
-    },
-    {
-      date: "2024-04-17",
-      events: [
-        { time: "09:00 AM", title: "Final Day" },
-        { time: "02:00 PM", title: "Project Submission" },
-        { time: "04:00 PM", title: "Presentations" },
-        { time: "06:00 PM", title: "Awards Ceremony" }
-      ]
-    }
-  ],
-  prizes: [
-    { rank: "1st", amount: "₹2,50,000", description: "Best Overall Project" },
-    { rank: "2nd", amount: "₹1,50,000", description: "Runner-up" },
-    { rank: "3rd", amount: "₹1,00,000", description: "Third Place" }
-  ],
-  sponsors: [
-    { name: "TechCorp", logo: "https://via.placeholder.com/150", tier: "Gold" },
-    { name: "InnovateLabs", logo: "https://via.placeholder.com/150", tier: "Silver" },
-    { name: "FutureTech", logo: "https://via.placeholder.com/150", tier: "Bronze" }
-  ],
-  mentors: [
-    { name: "Dr. Sarah Chen", role: "AI Research Lead", company: "TechCorp" },
-    { name: "Alex Kumar", role: "ML Engineer", company: "InnovateLabs" },
-    { name: "Priya Patel", role: "Data Scientist", company: "FutureTech" }
-  ],
-  resources: [
-    {
-      name: "AWS Credits",
-      link: "/resources/aws-credits",
-      description: "Get $500 in AWS credits for your project"
-    },
-    {
-      name: "GitHub Pro Access",
-      link: "/resources/github-pro",
-      description: "Free GitHub Pro access for 3 months"
-    },
-    {
-      name: "Development Tools",
-      link: "/resources/dev-tools",
-      description: "Access to premium development tools"
-    },
-    {
-      name: "API Access",
-      link: "/resources/api-access",
-      description: "Free API access for various services"
-    },
-    {
-      name: "Cloud Computing Resources",
-      link: "/resources/cloud-computing",
-      description: "Access to cloud computing platforms"
-    }
-  ],
-  contact: {
-    email: "ai-hackathon@hackverse.com",
-    discord: "https://discord.gg/ai-hackathon",
-    website: "https://ai-hackathon.hackverse.com"
-  }
-};
+interface Hackathon {
+  _id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  venue: string;
+  maxParticipants: number;
+  currentParticipants?: number;
+  prizePool: string;
+  status?: string;
+  registrationDeadline: string;
+  theme: string;
+  image?: string;
+  eligibility?: {
+    age?: string;
+    skillLevel?: string;
+    teamSize?: string;
+    requirements?: string[];
+  };
+  schedule?: Array<{
+    date?: string;
+    events?: Array<{
+      time?: string;
+      title?: string;
+      description?: string;
+    }>;
+  }>;
+  prizes?: Array<{
+    rank?: string;
+    amount?: string;
+    description?: string;
+  }>;
+  sponsors?: string[];
+  mentors?: Array<{
+    name?: string;
+    role?: string;
+    company?: string;
+  }>;
+  resources?: Array<{
+    name?: string;
+    link?: string;
+    description?: string;
+  }>;
+  contact?: {
+    email?: string;
+    discord?: string;
+    website?: string;
+  };
+}
 
 const HackathonDetails = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const hackathon = mockHackathon; // In real app, fetch based on id
+  const [hackathon, setHackathon] = useState<Hackathon | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchHackathon = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/hackathons/${id}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            navigate('/not-found');
+            return;
+          }
+          throw new Error('Failed to fetch hackathon');
+        }
+
+        const data = await response.json();
+        // Ensure all optional fields have defaults
+        const safeHackathon = {
+          ...data,
+          eligibility: data.eligibility || {
+            age: 'Not specified',
+            skillLevel: 'Not specified',
+            teamSize: 'Not specified',
+            requirements: []
+          },
+          schedule: data.schedule || [],
+          prizes: data.prizes || [],
+          sponsors: data.sponsors || [],
+          mentors: data.mentors || [],
+          resources: data.resources || [],
+          contact: data.contact || {
+            email: '',
+            discord: '',
+            website: ''
+          }
+        };
+        setHackathon(safeHackathon);
+      } catch (err) {
+        setError('Failed to load hackathon details');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHackathon();
+  }, [id, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Code2 className="mx-auto h-12 w-12 text-blue-600 animate-pulse" />
+          <p className="mt-4 text-lg text-gray-600">Loading hackathon details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Code2 className="mx-auto h-12 w-12 text-red-600" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">Error loading hackathon</h3>
+          <p className="mt-2 text-gray-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hackathon) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Code2 className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">Hackathon not found</h3>
+          <button
+            onClick={() => navigate('/hackathons')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Browse Hackathons
+          </button>
+        </div>
+      </div>
+    );
+  }
+  const renderList = (items: any[] | undefined, renderItem: (item: any, index: number) => React.ReactNode) => {
+    if (!items || items.length === 0) {
+      return (
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <p className="text-gray-600">No items available</p>
+        </div>
+      );
+    }
+    return items.map(renderItem);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -118,7 +169,7 @@ const HackathonDetails = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <button
+              <button 
                 onClick={() => navigate('/')}
                 className="flex items-center hover:opacity-80 transition-opacity mr-4"
               >
@@ -149,9 +200,13 @@ const HackathonDetails = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-90">
           <img
-            src={hackathon.image}
+            src={hackathon.image || '/default-hackathon.jpg'}
             alt={hackathon.title}
             className="w-full h-full object-cover mix-blend-overlay"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/default-hackathon.jpg';
+            }}
           />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -165,25 +220,30 @@ const HackathonDetails = () => {
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 mr-2" />
-                  <span>{new Date(hackathon.startDate).toLocaleDateString()} - {new Date(hackathon.endDate).toLocaleDateString()}</span>
+                  <span>
+                    {new Date(hackathon.startDate).toLocaleDateString()} - {' '}
+                    {new Date(hackathon.endDate).toLocaleDateString()}
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <MapPin className="h-5 w-5 mr-2" />
-                  <span>{hackathon.location}</span>
+                  <span>{hackathon.venue}</span>
                 </div>
                 <div className="flex items-center">
                   <Users className="h-5 w-5 mr-2" />
-                  <span>{hackathon.currentParticipants}/{hackathon.maxParticipants} participants</span>
+                  <span>
+                    {hackathon.currentParticipants}/{hackathon.maxParticipants} participants
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-5 w-5 mr-2" />
-                  <span>{hackathon.prizePool} prize pool</span>
+                  <span>Register by: {new Date(hackathon.registrationDeadline).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
             <div className="mt-6 md:mt-0">
               <button 
-                onClick={() => navigate(`/register/${hackathon.id}`)}
+                onClick={() => navigate(`/register/${hackathon._id}`)}
                 className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 Register Now
@@ -204,23 +264,22 @@ const HackathonDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold mb-2">Age</h3>
-                  <p>{hackathon.eligibility.age}</p>
+                  <p className="text-gray-700">{hackathon?.eligibility?.age || 'Not specified'}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Skill Level</h3>
-                  <p>{hackathon.eligibility.skillLevel}</p>
+                  <p className="text-gray-700">{hackathon?.eligibility?.skillLevel || 'Not specified'}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Team Size</h3>
-                  <p>{hackathon.eligibility.teamSize}</p>
+                  <p className="text-gray-700">{hackathon?.eligibility?.teamSize || 'Not specified'}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Requirements</h3>
-                  <ul className="list-disc list-inside">
-                    {hackathon.eligibility.requirements.map((req, index) => (
-                      <li key={index}>{req}</li>
-                    ))}
-                  </ul>
+                  {renderList(
+                    hackathon?.eligibility?.requirements,
+                    (req, i) => <li key={i} className="list-disc list-inside">{req}</li>
+                  )}
                 </div>
               </div>
             </section>
@@ -228,32 +287,43 @@ const HackathonDetails = () => {
             {/* Schedule */}
             <section className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-4">Schedule</h2>
-              <div className="space-y-6">
-                {hackathon.schedule.map((day, index) => (
-                  <div key={index} className="border-l-2 border-blue-500 pl-4">
-                    <h3 className="font-semibold mb-2">{new Date(day.date).toLocaleDateString()}</h3>
-                    <div className="space-y-2">
-                      {day.events.map((event, eventIndex) => (
-                        <div key={eventIndex} className="flex items-center">
-                          <span className="text-gray-600 w-24">{event.time}</span>
-                          <span>{event.title}</span>
-                        </div>
-                      ))}
+              {renderList(hackathon?.schedule, (day, dayIndex) => (
+                <div key={dayIndex} className="border-l-2 border-blue-500 pl-4 mb-6">
+                  <h3 className="font-semibold text-lg mb-2">
+                    {day.date ? new Date(day.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric'
+                    }) : `Day ${dayIndex + 1}`}
+                  </h3>
+                  {renderList(day.events, (event, eventIndex) => (
+                    <div key={eventIndex} className="flex items-start mb-4">
+                      <div className="w-24 flex-shrink-0">
+                        <span className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm">
+                          {event.time || 'TBD'}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{event.title || 'Activity'}</h4>
+                        {event.description && (
+                          <p className="text-gray-600 mt-1">{event.description}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ))}
             </section>
 
             {/* Prizes */}
             <section className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-4">Prizes</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {hackathon.prizes.map((prize, index) => (
-                  <div key={index} className="text-center p-4 border rounded-lg">
-                    <h3 className="font-bold text-xl mb-2">{prize.rank}</h3>
-                    <p className="text-blue-600 font-semibold mb-2">{prize.amount}</p>
-                    <p className="text-gray-600">{prize.description}</p>
+                {renderList(hackathon?.prizes, (prize, index) => (
+                  <div key={index} className="text-center p-4 border rounded-lg hover:shadow transition-shadow">
+                    <h3 className="font-bold text-xl mb-2">{prize.rank || 'Prize'}</h3>
+                    <p className="text-blue-600 font-semibold mb-2">{prize.amount || 'TBD'}</p>
+                    <p className="text-gray-600">{prize.description || 'Details coming soon'}</p>
                   </div>
                 ))}
               </div>
@@ -266,27 +336,12 @@ const HackathonDetails = () => {
             <section className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-4">Sponsors</h2>
               <div className="grid grid-cols-2 gap-4">
-                {hackathon.sponsors.map((sponsor, index) => (
-                  <div key={index} className="text-center">
-                    <img src={sponsor.logo} alt={sponsor.name} className="mx-auto h-16 mb-2" />
-                    <p className="font-semibold">{sponsor.name}</p>
-                    <p className="text-sm text-gray-600">{sponsor.tier} Sponsor</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Mentors */}
-            <section className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold mb-4">Mentors</h2>
-              <div className="space-y-4">
-                {hackathon.mentors.map((mentor, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
-                    <div>
-                      <p className="font-semibold">{mentor.name}</p>
-                      <p className="text-sm text-gray-600">{mentor.role} at {mentor.company}</p>
+                {renderList(hackathon?.sponsors, (sponsor, index) => (
+                  <div key={index} className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-2 flex items-center justify-center">
+                      <span className="text-gray-500 text-xs">{sponsor || 'Sponsor'}</span>
                     </div>
+                    <p className="font-semibold">{sponsor || 'Sponsor'}</p>
                   </div>
                 ))}
               </div>
@@ -295,60 +350,67 @@ const HackathonDetails = () => {
             {/* Resources */}
             <section className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-4">Resources</h2>
-              <div className="space-y-4">
-                {hackathon.resources.map((resource, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(resource.link)}
-                  >
-                    <div className="flex items-center">
-                      <ExternalLink className="h-5 w-5 mr-3 text-blue-600" />
-                      <div>
-                        <p className="font-medium text-gray-900">{resource.name}</p>
-                        <p className="text-sm text-gray-600">{resource.description}</p>
-                      </div>
+              {renderList(hackathon?.resources, (resource, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => resource.link && window.open(resource.link, '_blank')}
+                >
+                  <div className="flex items-center">
+                    <ExternalLink className="h-5 w-5 mr-3 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{resource.name || 'Resource'}</p>
+                      <p className="text-sm text-gray-600">{resource.description || ''}</p>
                     </div>
-                    <svg 
-                      className="h-5 w-5 text-gray-400" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M9 5l7 7-7 7" 
-                      />
-                    </svg>
                   </div>
-                ))}
-              </div>
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              ))}
             </section>
 
             {/* Contact */}
             <section className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-4">Contact</h2>
               <div className="space-y-4">
-                <div className="flex items-center">
-                  <Mail className="h-5 w-5 mr-2 text-blue-600" />
-                  <a href={`mailto:${hackathon.contact.email}`} className="text-blue-600 hover:underline">
-                    {hackathon.contact.email}
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Github className="h-5 w-5 mr-2 text-blue-600" />
-                  <a href={hackathon.contact.discord} className="text-blue-600 hover:underline">
-                    Join Discord
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <Linkedin className="h-5 w-5 mr-2 text-blue-600" />
-                  <a href={hackathon.contact.website} className="text-blue-600 hover:underline">
-                    Official Website
-                  </a>
-                </div>
+                {hackathon?.contact?.email && (
+                  <div className="flex items-center">
+                    <Mail className="h-5 w-5 mr-2 text-blue-600" />
+                    <a 
+                      href={`mailto:${hackathon.contact.email}`} 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {hackathon.contact.email}
+                    </a>
+                  </div>
+                )}
+                {hackathon?.contact?.discord && (
+                  <div className="flex items-center">
+                    <Github className="h-5 w-5 mr-2 text-blue-600" />
+                    <a 
+                      href={hackathon.contact.discord} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Join Discord
+                    </a>
+                  </div>
+                )}
+                {hackathon?.contact?.website && (
+                  <div className="flex items-center">
+                    <Linkedin className="h-5 w-5 mr-2 text-blue-600" />
+                    <a 
+                      href={hackathon.contact.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Official Website
+                    </a>
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -358,4 +420,4 @@ const HackathonDetails = () => {
   );
 };
 
-export default HackathonDetails; 
+export default HackathonDetails;

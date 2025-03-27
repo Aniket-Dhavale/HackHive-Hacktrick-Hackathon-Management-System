@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Code2, MapPin, Users, Target, Calendar, Award, Building2, UserCheck, BookOpen, MessageSquare } from 'lucide-react';
-
+import axios from 'axios'
 const HostHackathon = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Basic Information
     title: '',
@@ -77,13 +78,94 @@ const HostHackathon = () => {
       website: ''
     }
   });
+   // Add this function to handle API submission
+   const submitHackathon = async (data: any) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form submitted:', formData);
-    navigate('/');
+    try {
+      const response = await axios.post('http://localhost:8080/hackathons', data, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw error.response?.data || error.message;
+      }
+      throw error;
+    }
   };
 
+   // Modify your handleSubmit to use the API
+   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      // Format the data to match backend expectations
+      const submissionData = {
+        title: formData.title,
+        description: formData.description,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        maxParticipants: formData.maxParticipants,
+        prizePool: formData.prizePool,
+        registrationDeadline: formData.registrationDeadline,
+        eventType: formData.eventType,
+        venue: formData.venue,
+        platform: formData.platform,
+        platformLink: formData.platformLink,
+        eligibility: {
+          ageMin: formData.eligibility.ageMin,
+          ageMax: formData.eligibility.ageMax,
+          skillLevel: formData.eligibility.skillLevel,
+          location: formData.eligibility.location,
+          requirements: formData.eligibility.requirements
+        },
+        theme: formData.theme,
+        tracks: formData.tracks.filter((t: string) => t.trim() !== ''),
+        rules: formData.rules.filter((r: string) => r.trim() !== ''),
+        schedule: formData.schedule.map((item: any) => ({
+          date: item.date,
+          time: item.time,
+          event: item.event,
+          description: item.description
+        })),
+        sponsors: formData.sponsors.filter((s: string) => s.trim() !== ''),
+        judges: formData.judges.map((judge: any) => ({
+          name: judge.name,
+          email: judge.email,
+          expertise: judge.expertise,
+          invited: judge.invited
+        })),
+        contact: formData.contact
+      };
+
+      const result = await submitHackathon(submissionData);
+      console.log('Hackathon created:', result);
+      navigate('/hackathons'); // Redirect to hackathons page after creation
+    } catch (error: any) {
+      console.error('Error creating hackathon:', error);
+      
+      // Handle specific error cases
+      if (error.message === "A hackathon with this title already exists") {
+        alert('A hackathon with this title already exists. Please choose a different title.');
+      } else if (error.errors) {
+        alert(`Validation errors:\n${error.errors.join('\n')}`);
+      } else {
+        alert(error.message || 'Failed to create hackathon. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name.includes('.')) {
@@ -998,11 +1080,14 @@ const HostHackathon = () => {
                   </button>
                 ) : (
                   <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    Create Hackathon
-                  </button>
+        type="submit"
+        disabled={isSubmitting}
+        className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+          isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        {isSubmitting ? 'Creating...' : 'Create Hackathon'}
+      </button>
                 )}
               </div>
             </div>

@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Code2, ArrowLeft, User, Mail, Phone, GraduationCap, Users, MessageSquare } from 'lucide-react';
+import { Code2, ArrowLeft, User, Mail, Phone, GraduationCap, Users, MessageSquare, Plus, Trash2 } from 'lucide-react';
+
+interface TeamMember {
+  name: string;
+  email: string;
+  role: string;
+}
 
 const RegistrationForm = () => {
   const navigate = useNavigate();
@@ -12,15 +18,33 @@ const RegistrationForm = () => {
     heardFrom: '',
     lookingForTeam: false,
     teamPreference: '',
-    skills: ''
+    skills: '',
+    hasTeam: false,
+    teamName: '',
+    teamMembers: [] as TeamMember[]
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the data to your backend
-    console.log('Form submitted:', formData);
-    // Navigate to participant dashboard after successful registration
-    navigate('/participant-dashboard');
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
+
+      // Navigate to participant dashboard after successful registration
+      navigate('/participant-dashboard');
+    } catch (error) {
+      console.error('Registration error:', error);
+      // Handle error (show error message to user)
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -28,6 +52,29 @@ const RegistrationForm = () => {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    }));
+  };
+
+  const handleTeamMemberChange = (index: number, field: keyof TeamMember, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      teamMembers: prev.teamMembers.map((member, i) => 
+        i === index ? { ...member, [field]: value } : member
+      )
+    }));
+  };
+
+  const addTeamMember = () => {
+    setFormData(prev => ({
+      ...prev,
+      teamMembers: [...prev.teamMembers, { name: '', email: '', role: '' }]
+    }));
+  };
+
+  const removeTeamMember = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      teamMembers: prev.teamMembers.filter((_, i) => i !== index)
     }));
   };
 
@@ -132,6 +179,105 @@ const RegistrationForm = () => {
               </div>
             </div>
 
+            {/* Team Information */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900">Team Information</h2>
+              
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  name="hasTeam"
+                  checked={formData.hasTeam}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 block text-sm text-gray-900">
+                  I have a team
+                </label>
+              </div>
+
+              {formData.hasTeam && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <input
+                        type="text"
+                        name="teamName"
+                        value={formData.teamName}
+                        onChange={handleChange}
+                        required
+                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Enter your team name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-sm font-medium text-gray-700">Team Members</label>
+                      <button
+                        type="button"
+                        onClick={addTeamMember}
+                        className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Member
+                      </button>
+                    </div>
+
+                    {formData.teamMembers.map((member, index) => (
+                      <div key={index} className="p-4 border-2 border-gray-200 rounded-lg space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Member {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeTeamMember(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            value={member.name}
+                            onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Member Name"
+                            required
+                          />
+                          <input
+                            type="email"
+                            value={member.email}
+                            onChange={(e) => handleTeamMemberChange(index, 'email', e.target.value)}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Member Email"
+                            required
+                          />
+                          <select
+                            value={member.role}
+                            onChange={(e) => handleTeamMemberChange(index, 'role', e.target.value)}
+                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                            required
+                          >
+                            <option value="">Select Role</option>
+                            <option value="frontend">Frontend Developer</option>
+                            <option value="backend">Backend Developer</option>
+                            <option value="fullstack">Full Stack Developer</option>
+                            <option value="designer">UI/UX Designer</option>
+                            <option value="ml">ML/AI Engineer</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Additional Information */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Additional Information</h2>
@@ -212,7 +358,7 @@ const RegistrationForm = () => {
                 type="submit"
                 className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                Register Now
+                {formData.hasTeam ? 'Register Team' : 'Register Now'}
               </button>
             </div>
           </form>
