@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
-import { useSearchParams} from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 function Login() {
   const [authToken, setAuthToken] = useState("");
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   
-
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
       setAuthToken(token);
-      localStorage.setItem("authToken", token);
-      // Redirect to home after login
+      localStorage.setItem("token", token);
+      
+      // Get the stored redirect path or default to home
+      const redirectPath = localStorage.getItem("redirectPath") || "/";
+      localStorage.removeItem("redirectPath"); // Clear the stored path
+      navigate(redirectPath);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

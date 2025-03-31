@@ -1008,10 +1008,7 @@ const HostHackathon = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Code2 className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
-              </div>
+              
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => navigate('/')}

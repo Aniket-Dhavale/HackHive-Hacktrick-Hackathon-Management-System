@@ -165,36 +165,7 @@ const HackathonDetails = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <button 
-                onClick={() => navigate('/')}
-                className="flex items-center hover:opacity-80 transition-opacity mr-4"
-              >
-                <Code2 className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
-              </button>
-              <button
-                onClick={() => navigate('/hackathons')}
-                className="flex items-center text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-5 w-5 mr-1" />
-                Back to Hackathons
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium">
-                Sign In
-              </button>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                Sign Up
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       {/* Hero Section */}
       <div className="relative">

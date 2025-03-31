@@ -7,12 +7,13 @@ export default function Nav(){
   <div className="flex justify-between items-center h-16">
     <div className="flex items-center">
       <Code2 className="h-8 w-8 text-blue-600" />
-      <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
+      <a href="/" className="ml-2 text-xl font-bold text-gray-900">HackVerse</a>
+      
     </div>
     <div className="flex items-center gap-3">
     <AuthButton />
     </div>
-  </div>
+  </div>  
 </div>
 </nav>
     )

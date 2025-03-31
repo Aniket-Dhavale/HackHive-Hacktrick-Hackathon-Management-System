@@ -8,7 +8,7 @@ const ParticipantDashboard = () => {
     description: '',
     githubRepo: '',
     demoLink: '',
-    presentation: null as File | null
+    presentationLink: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -18,40 +18,10 @@ const ParticipantDashboard = () => {
     // Show success message or redirect
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProjectData(prev => ({
-        ...prev,
-        presentation: e.target.files![0]
-      }));
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center hover:opacity-80 transition-opacity mr-4"
-              >
-                <Code2 className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">HackVerse</span>
-              </button>
-              <button
-                onClick={() => navigate(-1)}
-                className="flex items-center text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-5 w-5 mr-1" />
-                Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -121,20 +91,21 @@ const ParticipantDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Presentation (PPT/Video)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Presentation Link</label>
                   <div className="relative">
                     <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
-                      type="file"
-                      name="presentation"
-                      onChange={handleFileChange}
+                      type="url"
+                      name="presentationLink"
+                      value={projectData.presentationLink}
+                      onChange={(e) => setProjectData(prev => ({ ...prev, presentationLink: e.target.value }))}
                       required
-                      accept=".ppt,.pptx,.pdf,.mp4"
                       className="w-full pl-10 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                      placeholder="https://your-presentation-link.com"
                     />
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
-                    Accepted formats: PPT, PPTX, PDF, MP4 (Max size: 50MB)
+                    Provide a link to your presentation (Google Slides, PowerPoint Online, etc.)
                   </p>
                 </div>
 
@@ -178,7 +149,7 @@ const ParticipantDashboard = () => {
                       <li>Project description</li>
                       <li>GitHub repository link</li>
                       <li>Demo link</li>
-                      <li>Presentation (PPT/Video)</li>
+                      <li>Presentation link (Google Slides, PowerPoint Online, etc.)</li>
                     </ul>
                   </div>
                 </div>
